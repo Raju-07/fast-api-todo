@@ -1,6 +1,8 @@
 from enum import Enum
 from datetime import date
 from pydantic import BaseModel
+from typing import Annotated
+from sqlalchemy import Date
 
 class Priority(int,Enum):
     high = 1
@@ -8,11 +10,11 @@ class Priority(int,Enum):
     low = 3
 
 class Todo(BaseModel):
-    id: int
-    title: str
-    description: str
-    priority: Priority
-    created_at: date
+    title: str   
+    description: str 
+    priority: int = 2
+    expired_at: Annotated[date,"Number of days after expiration"]
+    is_completed: bool = False
     
 
 

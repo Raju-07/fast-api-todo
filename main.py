@@ -1,39 +1,108 @@
 from datetime import date,timedelta
-from fastapi import FastAPI
+from fastapi import FastAPI,Depends
 from todo_model import Todo,Priority
+from database import engine,LocalSession
+import db_todo_model
+from sqlalchemy.orm import Session
+from sqlalchemy import Date
+import random
+
 app = FastAPI()
+db_todo_model.Base.metadata.create_all(bind=engine)
 
+# temperary data insertion 
 today =date.today()
+def get_exp_date():
+    return today + timedelta(days=random.randint(1,20))
 
+# existing data
 todos = [    
-Todo(id=1, title="Learn FastAPI", description="Start FastAPI tutorial", priority=Priority.high,   created_at=today + timedelta(days=0)),
-Todo(id=2, title="Read Pydantic", description="Read Pydantic docs",priority=Priority.medium, created_at=today + timedelta(days=1)),
-Todo(id=3, title="Write tests", description="Write unit tests",priority=Priority.low,    created_at=today + timedelta(days=2)),
-Todo(id=4, title="Build API", description="Create endpoints",priority=Priority.high,   created_at=today + timedelta(days=3)),
-Todo(id=5, title="Add auth", description="Implement auth",priority=Priority.high,   created_at=today + timedelta(days=4)),
-Todo(id=6, title="Docs", description="Document API",priority=Priority.medium, created_at=today + timedelta(days=5)),    
-Todo(id=7, title="CI/CD", description="Set up CI pipeline",priority=Priority.medium, created_at=today + timedelta(days=6)),    
-Todo(id=8, title="Debug", description="Fix reported bugs",priority=Priority.low,    created_at=today + timedelta(days=7)),    
-Todo(id=9, title="Refactor", description="Refactor codebase",priority=Priority.medium, created_at=today + timedelta(days=8)),    
-Todo(id=10, title="Optimize", description="Performance improvements",priority=Priority.low,    created_at=today + timedelta(days=9)),    
-Todo(id=11, title="Deploy", description="Deploy to staging",priority=Priority.high,   created_at=today + timedelta(days=10)),    
-Todo(id=12, title="Monitor", description="Add monitoring",priority=Priority.medium, created_at=today + timedelta(days=11)),    
-Todo(id=13, title="Feedback", description="Collect user feedback",priority=Priority.low,    created_at=today + timedelta(days=12)),    
-Todo(id=14, title="Bugfix", description="Critical bugfix",priority=Priority.high,   created_at=today + timedelta(days=13)),    
-Todo(id=15, title="Upgrade deps", description="Update dependencies",priority=Priority.medium, created_at=today + timedelta(days=14)),    
-Todo(id=16, title="Cleanup", description="Remove unused code",priority=Priority.low,    created_at=today + timedelta(days=15)),    
-Todo(id=17, title="Analytics", description="Add analytics",priority=Priority.medium, created_at=today + timedelta(days=16)),    
-Todo(id=18, title="UX", description="Improve UX",priority=Priority.low,    created_at=today + timedelta(days=17)),    
-Todo(id=19, title="Scale", description="Horizontal scaling",priority=Priority.high,   created_at=today + timedelta(days=18)),    
-Todo(id=20, title="Release", description="Prepare release notes",priority=Priority.medium, created_at=today + timedelta(days=19)),]
+Todo( title="Learn FastAPI", description="Start FastAPI tutorial", priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),
+Todo( title="Read Pydantic", description="Read Pydantic docs",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),
+Todo( title="Write tests", description="Write unit tests",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),
+Todo( title="Build API", description="Create endpoints",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),
+Todo( title="Add auth", description="Implement auth",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),
+Todo( title="Docs", description="Document API",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="CI/CD", description="Set up CI pipeline",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Debug", description="Fix reported bugs",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Refactor", description="Refactor codebase",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Optimize", description="Performance improvements",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Deploy", description="Deploy to staging",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Monitor", description="Add monitoring",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Feedback", description="Collect user feedback",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Bugfix", description="Critical bugfix",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Upgrade deps", description="Update dependencies",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Cleanup", description="Remove unused code",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Analytics", description="Add analytics",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="UX", description="Improve UX",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Scale", description="Horizontal scaling",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
+Todo( title="Release", description="Prepare release notes",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False]),)]
+
+#function to add existing data to the database
+def db_init():
+    db = LocalSession()
+    try:
+        count = db.query(db_todo_model.Todo).count()
+        if count == 0:
+            for to_do in todos:
+                db.add(db_todo_model.Todo(**to_do.model_dump()))
+                db.commit()
+    finally:
+        db.close()
+
+db_init()
+
+#database 
+def get_db():
+    db = LocalSession()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 
 @app.get('/')
-def get_todos():
-    return todos
+def get_todos(db: Session = Depends(get_db)):
+    db_todos = db.query(db_todo_model.Todo).all()
+    return db_todos
 
 @app.get("/todos/{id}")
-def get_todo_by_id(id:int):
-    for todo in todos:
-        if todo.id == id:
-            return todo
-    return "Not Found"
+def get_todo_by_id(id:int,db: Session = Depends(get_db)):
+    todo = db.query(db_todo_model.Todo).filter(db_todo_model.Todo.id == id).first()
+    if todo:
+        return todo
+    return "Todo not Found"
+
+# Adding data
+@app.post("/todo")
+def add_todo(todo:Todo,db: Session = Depends(get_db)):
+    try:
+        db.add(db_todo_model.Todo(**todo.model_dump()))
+        db.commit()
+        return "Todo added.."
+    except Exception as e:
+        return f"Error: {e}"
+        
+@app.put("/todo")
+def update_todo(id:int,todo:Todo,db: Session = Depends(get_db)):
+    db_todo = db.query(db_todo_model.Todo).filter(db_todo_model.Todo.id == id).first()
+    if db_todo:
+            db_todo.title = todo.title
+            db_todo.description = todo.description
+            db_todo.priority = todo.priority
+            db_todo.is_completed = todo.is_completed
+            db.commit()
+            return f"todo updated with {id = }"
+    return f"No todo found to update with {id = }"
+
+@app.delete("/todo")
+def delete_todo(id:int,db: Session = Depends(get_db)):
+    db_todo = db.query(db_todo_model.Todo).filter(db_todo_model.Todo.id == id).first()
+    if db_todo:
+        db.delete(db_todo)
+        db.commit()
+        return "Todo Deleted successfully..."
+    else:
+        return "Nothing found to delete"
+
