@@ -15,13 +15,24 @@ import db_todo_model
 # DB Connections imports
 import asyncio
 from contextlib import asynccontextmanager
-from supabase import acreate_client,AsyncClient
+from supabase import AsyncClient
 
 def handle_db_changes(payload):
-    print("Database change detected")
-    print(f"Event type is {payload.get('eventType')}")
-    print(f'Payload data {payload.get('new')}\n')
+    print(" [DATABASE CHANGE EVENT DETECTED]")
+    
+    change_data = payload.get('data', {})
+    
+    event_enum = change_data.get('type')  
+    event_name = event_enum.value if event_enum else "UNKNOWN"
+    table_name = change_data.get('table')
+    
 
+    row_data = change_data.get('record')
+    
+    print(f"Action:     {event_name}")
+    print(f"Table:      {table_name}")
+    print(f"Row Values: {row_data}")
+    print("--\n", flush=True)
 
 # lifespan event hook
 @asynccontextmanager
