@@ -17,11 +17,10 @@ import asyncio
 from contextlib import asynccontextmanager
 from supabase import AsyncClient
 
+# handling function if db changes detected
 def handle_db_changes(payload):
     print(" [DATABASE CHANGE EVENT DETECTED]")
-    
     change_data = payload.get('data', {})
-    
     event_enum = change_data.get('type')  
     event_name = event_enum.value if event_enum else "UNKNOWN"
     table_name = change_data.get('table')

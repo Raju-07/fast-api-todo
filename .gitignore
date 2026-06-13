@@ -1,4 +1,5 @@
 .env
 rough.py
-.pyc
+*.pyc
 rough.ipynb
+__pycache__/
