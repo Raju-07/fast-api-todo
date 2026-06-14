@@ -2,7 +2,7 @@
 
 FastAPI is web Framework it's lightweight and blazing fast for handing api work
 
-In this documents i'm not going to include so much theoritical part as we've a dedicated about the theory and all. In this i'll heavily focus on how to connect it with database with sqlalchemy and with the supabase connection string and realtime channel 
+In this documents i'm not going to include so much theoritical part as we've a dedicated about the theory and all. In this i'll heavily focus on how to connect it with database with sqlalchemy and with the supabase connection string and realtime channel
 
 ### Importance
 
@@ -25,7 +25,6 @@ def read_home():
 
 ```
 
-
 ### Connection with Database (localhost) Postgres
 
 For connecting it with database we required sqlalchemy package and psycopg2 postgres driver and from sqlalchemy.orm we need sessionmaker and create_engine from sqlalchemy
@@ -47,10 +46,9 @@ engine = create_engine(db_url)
 local_session = sessionmaker(bind=engine,autocommit=False,autoflush=False	)
 ```
 
-
 ### Connecting it with Supabase Database
 
-it's so simple to connect with the supabase database as we just need to change the db_url of the project with supabase project connection string 
+it's so simple to connect with the supabase database as we just need to change the db_url of the project with supabase project connection string
 
 * create an account on supabase
 * create a project under an org
@@ -59,8 +57,7 @@ it's so simple to connect with the supabase database as we just need to change t
 * copy the connection string and replace it with the db_url
 * congrats you're successfully connected with the supabase database
 
-
-### Enabling Realtime Connection 
+### Enabling Realtime Connection
 
 we need to do couple things needed
 
@@ -72,7 +69,7 @@ we need to do couple things needed
 
 ##### Good Practice
 
-add all the credential in the .env file if you haven't yet then create it first and add 
+add all the credential in the .env file if you haven't yet then create it first and add
 
 keep it mind to don't push it on the github, as it contain sensitive data '.env' never meant to push on github. and also add this filename in the '.gitignore' file
 
@@ -115,7 +112,6 @@ def get_db():
 
 
 ```
-
 
 ##### Create a async function which listens for the changes in db
 
@@ -203,3 +199,27 @@ in last bind the async @asynccontextmanager with the instance of the fastAPI i.e
 `app = FastAPI(lifespance = app_lifespan)`
 
 that it as of June13,2026 9:25PM
+
+## Basics of SQLALCHEMY
+
+1. `.add() `This function is used to insert the data in the database
+2. `.query()` This function is used to search operation or select operation
+3. `query().filter()` is used to apply filter on the selected data
+4. `.delete() is used to delete the data from the database`
+5. `from sqlalchemy.orm import coloum_property` This colum_property is a column which isn't stored in the database but calculated on the fly
+
+### Evet Listening in db
+
+event listening listen is a feature where the db constanly looking for any changes made in the db. if detected any changes then the function under the event listener will be called
+
+`for instance:`
+
+```python
+from sqlalchemy import event
+
+@event.listens_for(Todo,"before_update")
+def update_timestamp(mapper,connection,target):
+    target.updated_at = datetime.now(timezone.utc) 
+```
+
+in this snippet `Todo ` is a table name and `before_update` is the state of db. if any changes will be detected in the `Todo` table then the function below `update_timestamp` will be trigger in this case and operation which in defined will be executed.
