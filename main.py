@@ -53,7 +53,7 @@ async def app_lifespan(app:FastAPI):
             callback=handle_db_changes
         ).subscribe(
             # Adding a status callback to verify the websocket state!
-            lambda status, error=None: print(f"📡 Channel Status: {status}", f"| Error: {error}" if error else "")
+            lambda status, error=None: print(f" Channel Status: {status}", f"| Error: {error}" if error else "")
             )
         )
         await asyncio.sleep(0.5)
