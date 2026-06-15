@@ -5,6 +5,7 @@ import random
 #Project imports
 from fastapi import FastAPI,Depends,HTTPException,status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 # Requirements imports
 from todo_model import TodoSchema,Priority
@@ -66,7 +67,8 @@ async def app_lifespan(app:FastAPI):
     print("Clearning application resources..")
 
 
-app = FastAPI(lifespan=app_lifespan)
+app = FastAPI(lifespan=app_lifespan,title="Todo Application",version="1.0.0",
+              description="This is a project where i'm making a todo apis to understand the fastapi better",)
 db_todo_model.Base.metadata.create_all(bind=engine)
 
 
@@ -162,5 +164,15 @@ def delete_todo(id:int,db: Session = Depends(get_db)):
     db.delete(db_todo)
     db.commit()
     return {'status':'sucess','message':f'Todo with {id = } deleted successfully'}
+
+@app.patch("/todo/{id}")
+def update_expired_time(id:int,data = date.today(),db:Session = Depends(get_db)):
+    db_data = db.query(db_todo_model.Todo).filter(db_todo_model.Todo.id == id).one()
+    if not db_data:
+        return HTTPException(status_code=(status.HTTP_404_NOT_FOUND),detail="No Data found to update")
+    db_data.expired_at = data
+    db.commit()
+    return {'status':'success','message':f' Date updated where {id = }'}
+
     
 
