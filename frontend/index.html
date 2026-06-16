@@ -1,41 +1,626 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastAPI Learning</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FastAPI Todo UI</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f6fb;
+      color: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, #eef5ff 0%, #f3f6fb 40%, #f8fafc 100%);
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 20px 24px;
+      border-radius: 26px;
+      background: #ffffffaa;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 18px 55px rgba(15, 23, 42, 0.08);
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 2rem;
+      letter-spacing: -0.03em;
+    }
+
+    .topbar small {
+      display: block;
+      margin-top: 4px;
+      color: #64748b;
+    }
+
+    .pill-btn {
+      border: none;
+      border-radius: 999px;
+      background: #2563eb;
+      color: #fff;
+      padding: 14px 24px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .pill-btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      padding: 18px 20px;
+      border-radius: 20px;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    .stat-card h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      color: #475569;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .stat-card strong {
+      display: block;
+      font-size: 2rem;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+
+    .stat-card small {
+      color: #64748b;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .panel {
+      padding: 22px;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-header span {
+      color: #475569;
+      font-size: 0.95rem;
+    }
+
+    .todo-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .todo-card {
+      border-radius: 20px;
+      border: 1px solid #e2e8f0;
+      padding: 18px;
+      background: #f8fafc;
+      display: grid;
+      gap: 14px;
+    }
+
+    .todo-card header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .todo-card h3 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .todo-card p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    .todo-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .button-row button {
+      border: none;
+      padding: 10px 14px;
+      border-radius: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .button-row button:hover {
+      transform: translateY(-1px);
+    }
+
+    .button-row .edit {
+      background: #0ea5e9;
+      color: #fff;
+    }
+
+    .button-row .delete {
+      background: #ef4444;
+      color: #fff;
+    }
+
+    .attention-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .attention-item {
+      padding: 16px;
+      border-radius: 18px;
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+    }
+
+    .attention-item h4 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .attention-item small {
+      color: #9a3412;
+    }
+
+    .form-panel {
+      padding: 22px;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+    }
+
+    .form-group {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid #cbd5e1;
+      padding: 14px 16px;
+      background: #f8fafc;
+      color: #111827;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .form-actions button {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 18px;
+      cursor: pointer;
+      font-weight: 700;
+      min-width: 120px;
+    }
+
+    .primary-action {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .secondary-action {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .form-note {
+      margin-top: 14px;
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 960px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div style="padding-left: 20px;padding-right: 20px;">
-        <div class="container">
-            <h3 style="text-align: left;">Hello, @username</h3>
-            <h4 style="text-align: right;color:chocolate;">
-                Date
-            </h4>
-        </div>
-        <div class="button-box">
-            <a href="#" class="button-box">Click me</a>
-            <a href="#" class="button-box">Click me</a>
-            <a href="#" class="button-box">Click me</a>
-            <a href="#" class="button-box">Click me</a>
-        </div>
-        
-    </div>
-</body>
-<style>
-    .container {
-        display: flex;
-        justify-content: space-between;
-    }
-    .button-box{  
-        display: inline-block;  
-        padding: 56px 56px;  
-        background: #73acd7;  
-        color: white;  
-        text-decoration: none;  
-        border-radius: 6px;
-    }
-        .button-box:hover{ opacity: 0.95;color:darkorange; }
+  <div class="page">
+    <header class="topbar">
+      <div>
+        <h1>Hello <span id="username">username</span></h1>
+      </div>
+      <button id="newTodoButton" class="pill-btn">+ New</button>
+    </header>
 
-</style>
+    <section class="stats-grid">
+      <article class="stat-card">
+        <h3>Total Todos</h3>
+        <strong id="totalCount">0</strong>
+        <small>All task items</small>
+      </article>
+      <article class="stat-card">
+        <h3>Pending</h3>
+        <strong id="pendingCount">0</strong>
+        <small>Still to do</small>
+      </article>
+      <article class="stat-card">
+        <h3>Completed</h3>
+        <strong id="completedCount">0</strong>
+        <small>Finished tasks</small>
+      </article>
+      <article class="stat-card">
+        <h3>Due Soon</h3>
+        <strong id="dueSoonCount">0</strong>
+        <small>Ending soon</small>
+      </article>
+      <article class="stat-card">
+        <h3>High Priority</h3>
+        <strong id="priorityCount">0</strong>
+        <small>Important tasks</small>
+      </article>
+    </section>
+
+    <div class="main-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Todo list</h2>
+          <span id="todoCount">0 items</span>
+        </div>
+        <div id="todoList" class="todo-list"></div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-header">
+          <h2>Attention</h2>
+        </div>
+        <div id="attentionList" class="attention-list"></div>
+      </aside>
+    </div>
+
+    <section class="form-panel">
+      <div class="panel-header">
+        <h2 id="formTitle">Add new todo</h2>
+      </div>
+      <form id="todoForm">
+        <div class="form-group">
+          <label for="title">Heading (Title)</label>
+          <input id="title" name="title" type="text" placeholder="Enter todo title" required />
+        </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" placeholder="Add details" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="due_date">Date of end</label>
+          <input id="due_date" name="due_date" type="date" required />
+        </div>
+        <div class="form-group">
+          <label for="priority">Priority</label>
+          <select id="priority" name="priority" required>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="saveButton" class="primary-action">Create</button>
+          <button type="button" id="clearButton" class="secondary-action">Clear</button>
+        </div>
+        <p class="form-note">Use the form to create new todo items. Select an item and click edit to update it, or delete to remove it.</p>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    const apiBase = 'http://localhost:8000';
+    let todos = [];
+    let editingId = null;
+
+    const usernameEl = document.getElementById('username');
+    const totalCountEl = document.getElementById('totalCount');
+    const pendingCountEl = document.getElementById('pendingCount');
+    const completedCountEl = document.getElementById('completedCount');
+    const dueSoonCountEl = document.getElementById('dueSoonCount');
+    const priorityCountEl = document.getElementById('priorityCount');
+    const todoCountEl = document.getElementById('todoCount');
+    const todoListEl = document.getElementById('todoList');
+    const attentionListEl = document.getElementById('attentionList');
+    const formTitleEl = document.getElementById('formTitle');
+    const saveButton = document.getElementById('saveButton');
+    const newTodoButton = document.getElementById('newTodoButton');
+    const clearButton = document.getElementById('clearButton');
+    const todoForm = document.getElementById('todoForm');
+    const titleInput = document.getElementById('title');
+    const descriptionInput = document.getElementById('description');
+    const dueDateInput = document.getElementById('due_date');
+    const priorityInput = document.getElementById('priority');
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) return 'No date';
+      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function getDaysRemaining(dateString) {
+      const deadline = new Date(dateString);
+      const now = new Date();
+      const diff = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+      if (diff < 0) return 'Expired';
+      return `${diff} day${diff === 1 ? '' : 's'} left`;
+    }
+
+    function updateSummary() {
+      const total = todos.length;
+      const completed = todos.filter((item) => item.completed).length;
+      const pending = total - completed;
+      const dueSoon = todos.filter((item) => {
+        const deadline = new Date(item.due_date);
+        const now = new Date();
+        const diff = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+        return diff >= 0 && diff <= 3;
+      }).length;
+      const highPriority = todos.filter((item) => item.priority === 'high').length;
+
+      totalCountEl.textContent = total;
+      completedCountEl.textContent = completed;
+      pendingCountEl.textContent = pending;
+      dueSoonCountEl.textContent = dueSoon;
+      priorityCountEl.textContent = highPriority;
+      todoCountEl.textContent = `${total} item${total === 1 ? '' : 's'}`;
+    }
+
+    function renderTodos() {
+      todoListEl.innerHTML = '';
+      attentionListEl.innerHTML = '';
+
+      if (!todos.length) {
+        todoListEl.innerHTML = '<p style="color: #475569;">No todos yet. Add a task to get started.</p>';
+      }
+
+      todos.forEach((todo) => {
+        const item = document.createElement('article');
+        item.className = 'todo-card';
+
+        item.innerHTML = `
+          <header>
+            <div>
+              <h3>${todo.title}</h3>
+              <div class="todo-meta">
+                <span class="badge">${todo.priority}</span>
+                <span>${formatDate(todo.due_date)}</span>
+                <span>${todo.completed ? 'Completed' : 'Pending'}</span>
+              </div>
+            </div>
+            <div class="button-row">
+              <button type="button" class="edit">Edit</button>
+              <button type="button" class="delete">Delete</button>
+            </div>
+          </header>
+          <p>${todo.description || ''}</p>
+        `;
+
+        item.querySelector('.edit').addEventListener('click', () => populateForm(todo));
+        item.querySelector('.delete').addEventListener('click', () => deleteTodo(todo.id));
+
+        todoListEl.appendChild(item);
+
+        if (todo.priority === 'high' || getDaysRemaining(todo.due_date).includes('day')) {
+          const alertItem = document.createElement('div');
+          alertItem.className = 'attention-item';
+          alertItem.innerHTML = `
+            <h4>${todo.title}</h4>
+            <small>Priority: ${todo.priority} · ${getDaysRemaining(todo.due_date)}</small>
+          `;
+          attentionListEl.appendChild(alertItem);
+        }
+      });
+
+      updateSummary();
+    }
+
+    async function fetchTodos() {
+      try {
+        const response = await fetch(`${apiBase}/todos`);
+        if (!response.ok) throw new Error('Failed to fetch todos');
+        todos = await response.json();
+        renderTodos();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    async function createTodo(data) {
+      const response = await fetch(`${apiBase}/todos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Unable to create todo');
+      return response.json();
+    }
+
+    async function updateTodo(id, data) {
+      const response = await fetch(`${apiBase}/todos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Unable to update todo');
+      return response.json();
+    }
+
+    async function deleteTodo(id) {
+      if (!confirm('Do you want to delete this todo?')) return;
+      try {
+        const response = await fetch(`${apiBase}/todos/${id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Unable to delete todo');
+        todos = todos.filter((item) => item.id !== id);
+        renderTodos();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function populateForm(todo) {
+      editingId = todo.id;
+      formTitleEl.textContent = 'Update todo';
+      saveButton.textContent = 'Update';
+      titleInput.value = todo.title || '';
+      descriptionInput.value = todo.description || '';
+      dueDateInput.value = todo.due_date ? todo.due_date.split('T')[0] : '';
+      priorityInput.value = todo.priority || 'medium';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      editingId = null;
+      formTitleEl.textContent = 'Add new todo';
+      saveButton.textContent = 'Create';
+      todoForm.reset();
+      dueDateInput.value = new Date().toISOString().split('T')[0];
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+      const data = {
+        title: titleInput.value.trim(),
+        description: descriptionInput.value.trim(),
+        due_date: dueDateInput.value,
+        priority: priorityInput.value,
+        completed: false,
+      };
+      try {
+        if (editingId) {
+          await updateTodo(editingId, data);
+        } else {
+          await createTodo(data);
+        }
+        resetForm();
+        await fetchTodos();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    newTodoButton.addEventListener('click', resetForm);
+    clearButton.addEventListener('click', resetForm);
+    todoForm.addEventListener('submit', handleSubmit);
+
+    document.addEventListener('DOMContentLoaded', () => {
+      usernameEl.textContent = 'user';
+      resetForm();
+      fetchTodos();
+    });
+  </script>
+</body>
 </html>

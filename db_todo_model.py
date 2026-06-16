@@ -34,7 +34,7 @@ class Todo(Base):
     
     updated_at: Mapped[DateTime] = map_col(
         DateTime(timezone = True),
-        nullable=False,
+            nullable=False,
         default= lambda: datetime.now(timezone.utc),
         server_default=func.timezone("UTC",func.now()),
         onupdate=datetime.now(timezone.utc),

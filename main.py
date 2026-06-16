@@ -5,18 +5,25 @@ import random
 #Project imports
 from fastapi import FastAPI,Depends,HTTPException,status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+# from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.cors import CORSMiddleware
 
 # Requirements imports
 from todo_model import TodoSchema,Priority
 from database import engine,LocalSession,get_db,project_url,anon_key,supabase_url
 import database
 import db_todo_model
+import db.user_modal
 
 # DB Connections imports
 import asyncio
 from contextlib import asynccontextmanager
 from supabase import AsyncClient
+
+from api.dependencies import get_current_user
+from api.auth import router as auth_router
+
+import crud
 
 # handling function if db changes detected
 def handle_db_changes(payload):
@@ -25,8 +32,6 @@ def handle_db_changes(payload):
     event_enum = change_data.get('type')  
     event_name = event_enum.value if event_enum else "UNKNOWN"
     table_name = change_data.get('table')
-    
-
     row_data = change_data.get('record')
     
     print(f"Action:     {event_name}")
@@ -40,10 +45,8 @@ async def app_lifespan(app:FastAPI):
     if project_url and anon_key:
         database.supabase_client = await database.acreate_client(project_url,anon_key)
         
-
         # Configure it to listen to changes and check subscription status
         channel = database.supabase_client.channel("realtime-todo-tracking")
-
         print("attemping to establishing Realtime Websocket Handshake")
 
         await (
@@ -61,118 +64,62 @@ async def app_lifespan(app:FastAPI):
         print("Real-time Event channels open successfully..")
     else:
         print("Realtime Configuration skipped due to missing project url")
-    
     yield
-    
     print("Clearning application resources..")
 
 
-app = FastAPI(lifespan=app_lifespan,title="Todo Application",version="1.0.0",
-              description="This is a project where i'm making a todo apis to understand the fastapi better",)
+app = FastAPI(
+    lifespan=app_lifespan,
+    title="Todo Application",
+    version="1.0.0",
+    description="This is a project where i'm making a todo apis to understand the fastapi better",)
+
 db_todo_model.Base.metadata.create_all(bind=engine)
+db.user_modal.Base.metadata.create_all(bind=engine)
 
+app.include_router(auth_router,prefix='/api/v1')
 
-# temperary data insertion 
-today =date.today()
-def get_exp_date():
-    return today + timedelta(days=random.randint(1,20))
+@app.get("/api/v1/protected-data")
+async def get_secure_data(current_user: str = Depends(get_current_user)):
+    return {'message':f"from {current_user = } you've access to this data "}
 
-# existing data
-todos = [    
-TodoSchema( title="Learn FastAPI", description="Start FastAPI tutorial", priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),
-TodoSchema( title="Read Pydantic", description="Read Pydantic docs",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),
-TodoSchema( title="Write tests", description="Write unit tests",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),
-TodoSchema( title="Build API", description="Create endpoints",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),
-TodoSchema( title="Add auth", description="Implement auth",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),
-TodoSchema( title="Docs", description="Document API",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="CI/CD", description="Set up CI pipeline",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Debug", description="Fix reported bugs",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Refactor", description="Refactor codebase",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Optimize", description="Performance improvements",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Deploy", description="Deploy to staging",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Monitor", description="Add monitoring",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Feedback", description="Collect user feedback",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Bugfix", description="Critical bugfix",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Upgrade deps", description="Update dependencies",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Cleanup", description="Remove unused code",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Analytics", description="Add analytics",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="UX", description="Improve UX",priority=Priority.low,    expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Scale", description="Horizontal scaling",priority=Priority.high,   expired_at=get_exp_date(),is_completed=random.choice([True,False])),    
-TodoSchema( title="Release", description="Prepare release notes",priority=Priority.medium, expired_at=get_exp_date(),is_completed=random.choice([True,False]),)]
+origins = [
+    "http://localhost",
+    "http://127.0.0.1",
+    "*"
+]
 
-#function to add existing data to the database
-def db_init():
-    db = LocalSession()
-    try:
-        count = db.query(db_todo_model.Todo).count()
-        if count == 0:
-            for to_do in todos:
-                db.add(db_todo_model.Todo(**to_do.model_dump()))
-                db.commit()
-    finally:
-        db.close()
-
-db_init()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = origins,
+    allow_credentials = True,
+    allow_methods = ["PUT","GET","POST","DELETE"],
+    allow_headers = ["*"],
+)
 
 @app.get('/')
-def get_todos(db: Session = Depends(get_db),):
-    db_todos = db.query(db_todo_model.Todo).all()
-    return db_todos
+async def get_todos(db: Session = Depends(get_db)):
+    return await crud.get_all_todo(db=db)
 
 @app.get("/todos/{id}")
-def get_todo_by_id(id:int,db: Session = Depends(get_db)):
-    todo = db.query(db_todo_model.Todo).filter(db_todo_model.Todo.id == id).first()
-    if not todo:
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Requrested Todo not Found with {id = }")
-    
-    return todo
-    
+async def get_todo_by_id(id:int,db: Session = Depends(get_db)):
+    return await crud.get_todo_by_id(id,db=db)    
 
 # Adding data
 @app.post("/todo",status_code=status.HTTP_201_CREATED)
-def add_todo(todo:TodoSchema,db: Session = Depends(get_db)):
-    try:
-        new_todo = db_todo_model.Todo(**todo.model_dump())
-        db.add(new_todo)
-        db.commit()
-        db.refresh(new_todo)
-        return {'status':"success",'message':'Todo item recorded successfully'}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))
-        
-@app.put("/todo/{id}")
-def update_todo(id:int,todo:TodoSchema,db: Session = Depends(get_db)):
-    db_todo = db.query(db_todo_model.Todo).filter(db_todo_model.Todo.id == id).first()
-    if not db_todo:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"No Todo Found with {id = } ")
+async def add_todo(todo:TodoSchema,db: Session = Depends(get_db)):
+    return await crud.add_todo(todo,db=db)        
 
-    db_todo.title = todo.title
-    db_todo.description = todo.description
-    db_todo.priority = todo.priority
-    db_todo.is_completed = todo.is_completed
-    db.commit()
-    return {'status':'success','message':f"todo updated with {id = }"}
+@app.put("/todo/{id}")
+async def update_todo(id:int,todo:TodoSchema,db: Session = Depends(get_db)):
+   return await crud.update_todo(id,todo,db=db)
 
 @app.delete("/todo/{id}")
-def delete_todo(id:int,db: Session = Depends(get_db)):
-    db_todo = db.query(db_todo_model.Todo).filter(db_todo_model.Todo.id == id).first()
-    if not db_todo:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Not Todo Found to delete")
-    
-    db.delete(db_todo)
-    db.commit()
-    return {'status':'sucess','message':f'Todo with {id = } deleted successfully'}
+async def delete_todo(id:int,db: Session = Depends(get_db)):
+    return await crud.delete_todo(id,db=db)
 
 @app.patch("/todo/{id}")
-def update_expired_time(id:int,data = date.today(),db:Session = Depends(get_db)):
-    db_data = db.query(db_todo_model.Todo).filter(db_todo_model.Todo.id == id).one()
-    if not db_data:
-        return HTTPException(status_code=(status.HTTP_404_NOT_FOUND),detail="No Data found to update")
-    db_data.expired_at = data
-    db.commit()
-    return {'status':'success','message':f' Date updated where {id = }'}
+async def update_expired_time(id:int,db: Session = Depends(get_db)):
+    await crud.update_expired_time(id,db=db)
 
-    
 
