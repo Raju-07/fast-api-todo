@@ -5,12 +5,9 @@ from datetime import datetime, timezone, timedelta
 from core.config import secret_key, algorithm, access_token_expire_minutes
 
 def hash_password(password: str) -> str:
-    # 1. Convert plain text password to bytes
     password_bytes = password.encode('utf-8')
-    # 2. Generate a secure salt and hash the password
     salt = bcrypt.gensalt()
-    hashed_bytes = bcrypt.hashpw(password_bytes, salt)
-    # 3. Decode back to a standard string format to save cleanly in Supabase
+    hashed_bytes = bcrypt.hashpw(password_bytes,salt)
     return hashed_bytes.decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
